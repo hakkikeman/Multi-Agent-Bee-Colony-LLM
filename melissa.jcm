@@ -1,0 +1,49 @@
+/*
+    melissa
+    ---------------------------
+
+    JaCaMo Project File
+
+    This file defines the initial state of the MAS (initial agents, environment, organisation, ....)
+
+    (see jacamo/doc/jcm.html for more information about what can be defined in this file)
+
+    JaCaMo <VERSION>
+    <DATE>
+*/
+
+mas melissa {
+    agent queen : queen.asl {
+    	instances: 1
+    	roles: monarch in hive
+    } 
+       
+    agent worker : worker.asl {
+    	instances: 12
+    	roles: nurse in hive
+    	beliefs: age(0)
+    }
+    
+     agent worker : worker.asl {
+    	instances: 4
+    	roles: sentinel in hive
+    	beliefs: age(18)
+    }   
+    
+      agent worker : worker.asl {
+    	instances: 20
+    	roles: explorer in hive
+    	beliefs: age(22)
+    }   
+    
+    organisation hiveOrg : organisation.xml {
+        group hive : hiveGroup {
+            //debug
+        }
+    }
+
+    // agent source path
+    asl-path: src/agt
+              src/agt/inc
+
+}

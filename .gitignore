@@ -1,0 +1,14 @@
+
+*.class
+bin/melissa.xml
+bin/melissa.xml
+e_r_r_o_r.txt
+bin/melissa.xml
+bin/melissa.xml
+bin/melissa.xml
+
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
