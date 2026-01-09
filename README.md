@@ -162,17 +162,17 @@ Once running, the simulation will display:
 
 ### Demo
 
-![Melissa Running](img/melissa-running.gif)
+![MAS Simulation](img/MAS_gif.gif)
 
-*Real-time simulation with agent reports and activity logs*
+*Multi-Agent System battle simulation in action*
 
-![Running Stats](img/running-stats.png)
+![Sentinel Victory Battle](img/sentinel-battle-victory.jpg)
 
-*Detailed view of agent actions and hive statistics*
+*JaCaMo-based Sentinels defeating the LLM-powered Wasp through coordinated counter-attacks*
 
-![Visual Simulation](img/visual-simulation.png)
+![Wasp Battle Logs](img/wasp-battle-logs.jpg)
 
-*Graphical representation of the bee colony with Wasp battle*
+*Real-time battle logs showing Wasp's LLM strategy decisions and Sentinel responses*
 
 ---
 
