@@ -34,6 +34,12 @@ The battle ends with a dramatic victory announcement:
 - **"LLM-based Wasp Agent WINNER!"** - If Wasp eliminates all sentinels
 - **"JaCaMo-based Sentinels WINNER!"** - If sentinels defeat the Wasp
 
+![Wasp Victory](img/wasp-victory.jpg)
+*Wasp wins by eliminating all sentinels*
+
+![Sentinel Victory](img/sentinel-victory.jpg)
+*Sentinels win through collective defense*
+
 ---
 
 ## Overview
