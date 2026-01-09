@@ -1,0 +1,292 @@
+// GeminiService.java - LLM Integration for Wasp Agent Strategy
+package artifact;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.List;
+import java.util.Properties;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
+import model.Position;
+
+/**
+ * Service class for communicating with Gemini LLM API.
+ * Provides strategic attack decisions for the Wasp agent.
+ */
+public class GeminiService {
+    private static GeminiService instance;
+    private String apiKey;
+    private long lastCallTime = 0;
+    private static final long RATE_LIMIT_MS = 5000; // 5 seconds between calls
+    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    private final Gson gson = new Gson();
+
+    private GeminiService() {
+        loadApiKey();
+    }
+
+    public static synchronized GeminiService getInstance() {
+        if (instance == null) {
+            instance = new GeminiService();
+        }
+        return instance;
+    }
+
+    private void loadApiKey() {
+        try {
+            Properties props = new Properties();
+            // Try multiple paths for the config file
+            String[] paths = {
+                    "src/env/artifact/gemini-config.properties",
+                    "gemini-config.properties"
+            };
+
+            for (String path : paths) {
+                try {
+                    props.load(new FileInputStream(path));
+                    apiKey = props.getProperty("gemini.api.key");
+                    if (apiKey != null && !apiKey.isEmpty()) {
+                        System.out.println("[GeminiService] API key loaded successfully from: " + path);
+                        return;
+                    }
+                } catch (Exception e) {
+                    // Try next path
+                }
+            }
+
+            System.err.println("[GeminiService] WARNING: Could not load API key from config file!");
+        } catch (Exception e) {
+            System.err.println("[GeminiService] Error loading API key: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Represents an attack decision from the LLM
+     */
+    public static class AttackDecision {
+        public int targetX;
+        public int targetY;
+        public String reasoning;
+
+        public AttackDecision(int x, int y, String reasoning) {
+            this.targetX = x;
+            this.targetY = y;
+            this.reasoning = reasoning;
+        }
+    }
+
+    /**
+     * Query the LLM for optimal attack strategy based on sentinel positions
+     */
+    public AttackDecision getAttackStrategy(List<Position> sentinelPositions, Position waspPosition, int mapWidth,
+            int mapHeight) {
+        // Rate limiting check
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastCallTime < RATE_LIMIT_MS) {
+            System.out.println("[GeminiService] Rate limit active, using last cached decision");
+            return getDefaultDecision(sentinelPositions, waspPosition);
+        }
+        lastCallTime = currentTime;
+
+        if (apiKey == null || apiKey.isEmpty()) {
+            System.out.println("[GeminiService] No API key, using fallback strategy");
+            return getDefaultDecision(sentinelPositions, waspPosition);
+        }
+
+        try {
+            String prompt = buildPrompt(sentinelPositions, waspPosition, mapWidth, mapHeight);
+            String response = callGeminiAPI(prompt);
+            return parseResponse(response, sentinelPositions, waspPosition);
+        } catch (Exception e) {
+            String errorMsg = e.getMessage();
+            // Shorten 429 rate limit errors
+            if (errorMsg != null && errorMsg.contains("429")) {
+                // Extract retry time if present
+                String retryInfo = "";
+                if (errorMsg.contains("retry in")) {
+                    int idx = errorMsg.indexOf("retry in");
+                    int endIdx = errorMsg.indexOf("s", idx);
+                    if (endIdx > idx && endIdx - idx < 30) {
+                        retryInfo = " (" + errorMsg.substring(idx, endIdx + 1) + ")";
+                    }
+                }
+                System.out.println("[GeminiService] Rate limited" + retryInfo + ". Using fallback.");
+            } else {
+                System.err.println("[GeminiService] API error: "
+                        + (errorMsg != null && errorMsg.length() > 100 ? errorMsg.substring(0, 100) + "..."
+                                : errorMsg));
+            }
+            return getDefaultDecision(sentinelPositions, waspPosition);
+        }
+    }
+
+    private String buildPrompt(List<Position> sentinelPositions, Position waspPosition, int mapWidth, int mapHeight) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("You are an AI controlling a wasp predator in a beehive simulation game. ");
+        sb.append("Your goal is to hunt sentinel bees efficiently.\n\n");
+        sb.append("GAME RULES:\n");
+        sb.append("- ATTACK: You can kill 1 or 2 sentinels if they are within 50px of you\n");
+        sb.append("- DANGER: If 3+ sentinels are within 100px, they will counter-attack and damage you\n");
+        sb.append("- STRATEGY: Target isolated sentinels (1-2 together), avoid groups of 3+\n");
+        sb.append("- Map size: " + mapWidth + "x" + mapHeight + "\n");
+        sb.append("- Hive location is at bottom-right area (around 649-799x, 449-599y) - avoid entering!\n\n");
+
+        sb.append("CURRENT STATE:\n");
+        sb.append("- Your position: (" + waspPosition.getX() + ", " + waspPosition.getY() + ")\n");
+        sb.append("- Sentinel positions:\n");
+
+        for (int i = 0; i < sentinelPositions.size(); i++) {
+            Position p = sentinelPositions.get(i);
+            sb.append("  Sentinel " + (i + 1) + ": (" + p.getX() + ", " + p.getY() + ")\n");
+        }
+
+        sb.append("\nANALYZE and choose the BEST attack position that:\n");
+        sb.append("1. Has 1-2 sentinels within 50px (easy kill)\n");
+        sb.append("2. Has fewer than 3 sentinels within 100px (avoid counter-attack)\n");
+        sb.append("3. Targets sentinels OUTSIDE the hive (they cannot retreat)\n\n");
+
+        sb.append("RESPOND IN THIS EXACT FORMAT:\n");
+        sb.append("TARGET_X: <number>\n");
+        sb.append("TARGET_Y: <number>\n");
+        sb.append("REASONING: <brief explanation in one line>\n");
+
+        return sb.toString();
+    }
+
+    private String callGeminiAPI(String prompt) throws Exception {
+        URL url = java.net.URI.create(API_URL + "?key=" + apiKey).toURL();
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(10000);
+
+        // Build request body
+        JsonObject requestBody = new JsonObject();
+        JsonArray contents = new JsonArray();
+        JsonObject content = new JsonObject();
+        JsonArray parts = new JsonArray();
+        JsonObject part = new JsonObject();
+        part.addProperty("text", prompt);
+        parts.add(part);
+        content.add("parts", parts);
+        contents.add(content);
+        requestBody.add("contents", contents);
+
+        // Send request
+        try (OutputStream os = conn.getOutputStream()) {
+            byte[] input = gson.toJson(requestBody).getBytes("utf-8");
+            os.write(input, 0, input.length);
+        }
+
+        // Read response
+        int responseCode = conn.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+            StringBuilder response = new StringBuilder();
+            String responseLine;
+            while ((responseLine = br.readLine()) != null) {
+                response.append(responseLine.trim());
+            }
+            System.out.println("[GeminiService] API call successful");
+            return response.toString();
+        } else {
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "utf-8"));
+            StringBuilder error = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                error.append(line);
+            }
+            throw new Exception("API error " + responseCode + ": " + error.toString());
+        }
+    }
+
+    private AttackDecision parseResponse(String jsonResponse, List<Position> sentinelPositions, Position waspPosition) {
+        try {
+            JsonObject response = gson.fromJson(jsonResponse, JsonObject.class);
+            JsonArray candidates = response.getAsJsonArray("candidates");
+            if (candidates != null && candidates.size() > 0) {
+                JsonObject candidate = candidates.get(0).getAsJsonObject();
+                JsonObject contentObj = candidate.getAsJsonObject("content");
+                JsonArray partsArr = contentObj.getAsJsonArray("parts");
+                if (partsArr != null && partsArr.size() > 0) {
+                    String text = partsArr.get(0).getAsJsonObject().get("text").getAsString();
+
+                    // Parse the structured response
+                    int targetX = -1, targetY = -1;
+                    String reasoning = "LLM decision";
+
+                    for (String line : text.split("\n")) {
+                        line = line.trim();
+                        if (line.startsWith("TARGET_X:")) {
+                            targetX = extractNumber(line);
+                        } else if (line.startsWith("TARGET_Y:")) {
+                            targetY = extractNumber(line);
+                        } else if (line.startsWith("REASONING:")) {
+                            reasoning = line.substring("REASONING:".length()).trim();
+                        }
+                    }
+
+                    if (targetX >= 0 && targetY >= 0) {
+                        System.out.println("[GeminiService] LLM Strategy - Target: (" + targetX + "," + targetY + ") - "
+                                + reasoning);
+                        return new AttackDecision(targetX, targetY, reasoning);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[GeminiService] Parse error: " + e.getMessage());
+        }
+
+        return getDefaultDecision(sentinelPositions, waspPosition);
+    }
+
+    private int extractNumber(String line) {
+        try {
+            String numStr = line.replaceAll("[^0-9]", "");
+            return Integer.parseInt(numStr);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /**
+     * Fallback strategy when LLM is unavailable - find closest cluster of sentinels
+     */
+    private AttackDecision getDefaultDecision(List<Position> sentinelPositions, Position waspPosition) {
+        if (sentinelPositions.isEmpty()) {
+            return new AttackDecision(waspPosition.getX(), waspPosition.getY(), "No sentinels found");
+        }
+
+        // Find the position with most sentinels in a 100-pixel radius
+        int bestX = 0, bestY = 0;
+        int bestCount = 0;
+
+        for (Position p : sentinelPositions) {
+            int count = 0;
+            for (Position other : sentinelPositions) {
+                double dist = Math.sqrt(Math.pow(p.getX() - other.getX(), 2) + Math.pow(p.getY() - other.getY(), 2));
+                if (dist <= 100) {
+                    count++;
+                }
+            }
+            // Prefer clusters of 2-3 (avoid 4+ to minimize counter-attack risk)
+            if ((count >= 1 && count <= 3 && count > bestCount) ||
+                    (bestCount == 0 || (bestCount > 3 && count <= 3))) {
+                bestCount = count;
+                bestX = p.getX();
+                bestY = p.getY();
+            }
+        }
+
+        return new AttackDecision(bestX, bestY, "Fallback: targeting cluster of " + bestCount);
+    }
+}

@@ -2,6 +2,7 @@ package graphic;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import graphic.model.BeeGraphic;
 import javafx.scene.shape.Circle;
@@ -14,7 +15,7 @@ public class BeeResolver {
 		Circle circle = new Circle(4, bee.getColor());
 		circle.setLayoutX(positionX);
 		circle.setLayoutY(positionY);
-		
+
 		beeCircles.put(bee.getId(), new BeeGraphic(circle, bee));
 		return circle;
 	}
@@ -25,5 +26,12 @@ public class BeeResolver {
 
 	public void removeBee(String beeId) {
 		beeCircles.remove(beeId);
+	}
+
+	/**
+	 * Get all bee IDs currently tracked
+	 */
+	public Set<String> getAllBeeIds() {
+		return beeCircles.keySet();
 	}
 }

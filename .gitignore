@@ -2,10 +2,10 @@
 # Java / JaCaMo Project .gitignore
 # =====================================
 
-# Compiled class files
-*.class
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Log files
+# Gemini API Key - DO NOT COMMIT
+gemini-config.properties
 *.log
 log/
 

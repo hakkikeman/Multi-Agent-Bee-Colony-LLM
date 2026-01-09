@@ -59,6 +59,9 @@ dependencies {
     implementation 'org.openjfx:javafx-base:21.0.1'
     implementation 'org.openjfx:javafx-swing:21.0.1'
     implementation 'org.openjfx:javafx-media:21.0.1'
+    
+    // Gemini LLM Integration
+    implementation 'com.google.code.gson:gson:2.10.1'
 }
 
 sourceSets {

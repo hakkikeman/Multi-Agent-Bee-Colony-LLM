@@ -267,7 +267,7 @@ too_old :-
 
 /* ---------- Sentinel Plans ---------- */
 
-+!heat : cooling & energy(E) & not is_hungry(E) & role(sentinel)
++!heat : cooling & energy(E) & not is_hungry(E) & role(sentinel) & not fleeing
 <- 	.wait(100+math.random(200));
 	lookupArtifact("Hive",AId);
 	focus(AId);
@@ -278,7 +278,7 @@ too_old :-
 	};
 	!!heat.
 
-+!heat : not heating & energy(E) & not is_hungry(E) & role(sentinel)
++!heat : not heating & energy(E) & not is_hungry(E) & role(sentinel) & not fleeing
 <- 	.wait(100+math.random(200));
 	lookupArtifact("Hive",AId);
 	focus(AId);
@@ -293,7 +293,7 @@ too_old :-
 
 +!heat.
 
-+!cool: heating & energy(E) & not is_hungry(E) & role(sentinel)
++!cool: heating & energy(E) & not is_hungry(E) & role(sentinel) & not fleeing
 <- 	.wait(100+math.random(200));
 	lookupArtifact("Hive",AId);
 	focus(AId);
@@ -304,7 +304,7 @@ too_old :-
 	};
 	!!cool.
 
-+!cool: not cooling & energy(E) & not is_hungry(E) & role(sentinel)
++!cool: not cooling & energy(E) & not is_hungry(E) & role(sentinel) & not fleeing
 <- 	.wait(100+math.random(200));
 	lookupArtifact("Hive",AId);
 	focus(AId);
@@ -326,6 +326,75 @@ too_old :-
 <- stop_cool; -cooling; !stopHeatCool.
 
 +!stopHeatCool.
+
+/* ---------- Wasp Defense System ---------- */
+
+// React to wasp detection - flee to hive
++wasp_detected(WX, WY) : role(sentinel) & not fleeing
+<-  .print("ALERT! Wasp detected at (", WX, ",", WY, ")! Fleeing to hive!");
+    +fleeing;
+    !flee_to_hive.
+
+// Flee to hive plan
++!flee_to_hive : role(sentinel) & fleeing
+<-  lookupArtifact("Map", AId);
+    focus(AId);
+    ?hive(HX, HY, HW, HH)[artifact_id(AId)];
+    .random(R1);
+    .random(R2);
+    TargetX = HX + math.floor(HW * R1);
+    TargetY = HY + math.floor(HH * R2);
+    flyTo(TargetX, TargetY);
+    .print("Reached hive safety!");
+    .wait(3000);
+    -fleeing;
+    !!patrol_area.
+
++!flee_to_hive : role(sentinel)
+<-  .wait(500);
+    !!flee_to_hive.
+
+-!flee_to_hive
+<-  .wait(500);
+    -fleeing;
+    !!patrol_area.
+
+// Patrol area when wasp is gone
++!patrol_area : role(sentinel) & not wasp_nearby
+<-  .print("Patrolling area...");
+    lookupArtifact("Map", AId);
+    focus(AId);
+    ?hive(HX, HY, HW, HH)[artifact_id(AId)];
+    .random(R1);
+    .random(R2);
+    // Patrol around hive perimeter
+    PatrolX = HX - 50 + math.floor((HW + 100) * R1);
+    PatrolY = HY - 50 + math.floor((HH + 100) * R2);
+    flyTo(PatrolX, PatrolY);
+    .wait(2000);
+    !!patrol_area.
+
++!patrol_area : role(sentinel)
+<-  .wait(1000);
+    !!patrol_area.
+
+-!patrol_area
+<-  .wait(1000);
+    !!patrol_area.
+
+// Wasp gone - resume normal activity
++wasp_gone : role(sentinel)
+<-  .print("Wasp has left the area. Resuming normal duties.");
+    -fleeing;
+    -wasp_nearby.
+
+// Group counter-attack coordination
++sentinel_group_ready(Count) : Count >= 3 & role(sentinel) & not fleeing
+<-  .print("COUNTER-ATTACK! ", Count, " sentinels ready!");
+    .broadcast(tell, attacking_wasp).
+
++attacking_wasp[source(S)] : role(sentinel)
+<-  .print("Joining group attack with ", S).
 
 /* ---------- Explorer Plans ---------- */
 	

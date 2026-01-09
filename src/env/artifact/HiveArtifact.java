@@ -118,6 +118,8 @@ public class HiveArtifact extends Artifact {
 			Environment.getInstance().delivery(getCurrentOpAgentId().getAgentName());
 		} catch (CannotDepositOnThisPositionException | NoLongerHiveException | NoPollenCollectedException e) {
 			failed(e.getMessage());
+		} catch (NullPointerException e) {
+			// Silently ignore - bee was likely killed by Wasp
 		}
 	}
 

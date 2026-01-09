@@ -61,6 +61,8 @@ public class MapArtifact extends Artifact {
 					Direction.valueOf(direction.toUpperCase()));
 		} catch (MovimentOutOfBoundsException | InvalidMovimentException e) {
 			failed(e.getMessage());
+		} catch (NullPointerException e) {
+			// Silently ignore - bee was likely killed
 		}
 		await_time(Parameters.DELAY_MOVE_OPERATION);
 	}
@@ -72,9 +74,7 @@ public class MapArtifact extends Artifact {
 		} catch (MovimentOutOfBoundsException | InvalidMovimentException e) {
 			failed(e.getMessage());
 		} catch (NullPointerException e) {
-			System.out.println("Move failed to bee " + getCurrentOpAgentId().getAgentName() + ", x: " + x + " y: " + y);
-			e.printStackTrace();
-			failed(e.getMessage());
+			// Silently ignore - bee was likely killed
 		}
 		await_time(Parameters.DELAY_MOVE_OPERATION);
 	}
@@ -114,10 +114,16 @@ public class MapArtifact extends Artifact {
 		try {
 			String beeId = getCurrentOpAgentId().getAgentName();
 			Position beePos = getPosition(beeId);
+			// Silently return if bee is dead or position is null
+			if (beePos == null) {
+				return;
+			}
 			String pollenFieldId = Environment.getInstance().getMatchingPollenFieldId(beePos);
 			Environment.getInstance().collect(pollenFieldId, beeId);
 		} catch (PollenIsOverException | NoLongerPollenFieldException | CannotCollectOnThisPositionException e) {
 			failed(e.getMessage());
+		} catch (NullPointerException e) {
+			// Silently ignore - bee was likely killed
 		}
 	}
 

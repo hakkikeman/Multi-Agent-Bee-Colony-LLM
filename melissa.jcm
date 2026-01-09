@@ -36,6 +36,11 @@ mas melissa {
     	beliefs: age(22)
     }   
     
+    // LLM-powered Wasp predator agent
+    agent wasp : wasp.asl {
+    	instances: 1
+    }
+    
     organisation hiveOrg : organisation.xml {
         group hive : hiveGroup {
             //debug
