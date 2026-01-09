@@ -17,7 +17,7 @@ This project now features an exciting **LLM-powered Wasp agent** that battles ag
 | Side | Technology | Description |
 |------|------------|-------------|
 | 🐝 **Sentinels** | JaCaMo (BDI) | Traditional multi-agent system with beliefs, desires, and intentions |
-| 🔴 **Wasp** | Gemini LLM | AI-powered predator that strategically hunts sentinel bees |
+| 𓆤 **Wasp** | Gemini LLM | AI-powered predator that strategically hunts sentinel bees |
 
 ### Battle Mechanics
 
