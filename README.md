@@ -103,7 +103,7 @@ melissa/
     v      v        v
  🥚Larvae  ⚔️      🌸Flowers
           vs
-         🔴 Wasp (LLM)
+         ☠️ Wasp (LLM)
 ```
 
 ### Agent Configuration
