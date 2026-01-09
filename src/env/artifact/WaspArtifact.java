@@ -183,9 +183,9 @@ public class WaspArtifact extends Artifact {
                 waspPos.getX(), waspPos.getY(), attackRadius);
 
         if (nearbySentinels >= 2) {
-            // Counter-attack! 15 HP damage (7.5% of 200)
+            // Counter-attack! 20 HP damage (10% of 200)
             System.out.println("[WaspArtifact] COUNTER-ATTACK! " + nearbySentinels + " sentinels attacking!");
-            wasp.takeDamageAmount(15);
+            wasp.takeDamageAmount(20);
 
             // Update health observable
             ObsProperty healthProp = getObsProperty("wasp_health");
@@ -241,7 +241,7 @@ public class WaspArtifact extends Artifact {
 
             if (initialSentinelCount > 0) {
                 // Wait extra time for all sentinels to register
-                await_time(5000);
+                await_time(2000);
                 sentinels = Environment.getInstance().getSentinelPositions();
                 initialSentinelCount = sentinels.size();
                 break;
@@ -379,7 +379,7 @@ public class WaspArtifact extends Artifact {
                 if (allWithin100px >= 2 && counterAttackCooldown >= 20) {
                     System.out.println(
                             "[WaspArtifact] COUNTER-ATTACK! " + allWithin100px + " sentinels within 100px!");
-                    wasp.takeDamageAmount(15); // 15 damage
+                    wasp.takeDamageAmount(20); // 20 damage (10%)
                     updateWaspHealthUI();
                     counterAttackCooldown = 0;
 
