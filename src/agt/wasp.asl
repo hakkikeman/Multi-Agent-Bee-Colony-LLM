@@ -2,7 +2,7 @@
 // LLM-powered predator agent that hunts sentinel bees
 
 /* Initial beliefs */
-health(100).
+health(200).
 alive(true).
 battle_started(false).  // Track if battle has actually started
 
