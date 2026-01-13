@@ -283,8 +283,8 @@ public class WaspArtifact extends Artifact {
                     }
                 }
 
-                // SENTINEL COUNTER-ATTACK: 3+ sentinels within 100px (during wait phase)
-                if (allWithin100px >= 3 && waitStep % 10 == 0) { // Every 500ms
+                // SENTINEL COUNTER-ATTACK: 2+ sentinels within 100px (during wait phase)
+                if (allWithin100px >= 2 && waitStep % 10 == 0) { // Every 500ms
                     System.out.println(
                             "[WaspArtifact] COUNTER-ATTACK during wait! " + allWithin100px + " sentinels nearby!");
                     wasp.takeDamage(10);
