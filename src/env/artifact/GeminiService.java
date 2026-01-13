@@ -133,8 +133,8 @@ public class GeminiService {
         sb.append("Your goal is to hunt sentinel bees efficiently.\n\n");
         sb.append("GAME RULES:\n");
         sb.append("- ATTACK: You can kill 1 or 2 sentinels if they are within 50px of you\n");
-        sb.append("- DANGER: If 3+ sentinels are within 100px, they will counter-attack and damage you\n");
-        sb.append("- STRATEGY: Target isolated sentinels (1-2 together), avoid groups of 3+\n");
+        sb.append("- DANGER: If 2+ sentinels are within 100px, they will counter-attack and damage you\n");
+        sb.append("- STRATEGY: Target isolated sentinels (exactly 1 alone), avoid groups of 2+\n");
         sb.append("- Map size: " + mapWidth + "x" + mapHeight + "\n");
         sb.append("- Hive location is at bottom-right area (around 649-799x, 449-599y) - avoid entering!\n\n");
 
@@ -148,8 +148,8 @@ public class GeminiService {
         }
 
         sb.append("\nANALYZE and choose the BEST attack position that:\n");
-        sb.append("1. Has 1-2 sentinels within 50px (easy kill)\n");
-        sb.append("2. Has fewer than 3 sentinels within 100px (avoid counter-attack)\n");
+        sb.append("1. Has exactly 1 sentinel within 50px (safe kill)\n");
+        sb.append("2. Has fewer than 2 sentinels within 100px (avoid counter-attack)\n");
         sb.append("3. Targets sentinels OUTSIDE the hive (they cannot retreat)\n\n");
 
         sb.append("RESPOND IN THIS EXACT FORMAT:\n");
