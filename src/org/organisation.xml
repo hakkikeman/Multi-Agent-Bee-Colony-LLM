@@ -119,6 +119,36 @@
         	<goal id="start"/>
         </mission>
     </scheme>
+    
+    <!-- Battle Simulation Scheme - Wasp vs Sentinels -->
+    <scheme id="doBattle">
+        <goal id="hiveDefense" type="maintenance">
+            <plan operator="parallel">
+                <goal id="patrolPerimeter">
+                    <plan operator="sequence">
+                        <goal id="moveToPatrolPoint"/>
+                        <goal id="scanForThreats"/>
+                    </plan>
+                </goal>
+                <goal id="detectThreats">
+                    <plan operator="choice">
+                        <goal id="fleeToSafety"/>
+                        <goal id="groupAttack"/>
+                    </plan>
+                </goal>
+            </plan>
+        </goal>
+        
+        <!-- Defender Mission - Battle responsibilities for sentinels -->
+        <mission id="mDefender" min="1">
+            <goal id="patrolPerimeter"/>
+            <goal id="moveToPatrolPoint"/>
+            <goal id="scanForThreats"/>
+            <goal id="detectThreats"/>
+            <goal id="fleeToSafety"/>
+            <goal id="groupAttack"/>
+        </mission>
+    </scheme>
 </functional-specification>
 
 <normative-specification>
@@ -149,6 +179,9 @@
     <norm id="nFeeding" type="obligation" role="monarch" mission="mFeeding"/>
     <norm id="nRenewal" type="obligation" role="monarch" mission="mRenewal"/>
     <norm id="nTemperature" type="obligation" role="monarch" mission="mTemperature"/>
+    
+    <!-- Battle Simulation Norms -->
+    <norm id="nDefender" type="obligation" role="sentinel" mission="mDefender"/>
     
 </normative-specification>
 
