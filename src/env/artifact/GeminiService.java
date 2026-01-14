@@ -28,6 +28,11 @@ public class GeminiService {
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
     private final Gson gson = new Gson();
 
+    // Async prefetch support
+    private volatile AttackDecision prefetchedDecision = null;
+    private volatile boolean prefetchInProgress = false;
+    private AttackDecision lastValidDecision = null;
+
     private GeminiService() {
         loadApiKey();
     }
@@ -83,6 +88,13 @@ public class GeminiService {
     }
 
     /**
+     * Check if API is currently rate-limited (internal rate limit)
+     */
+    public boolean isInternallyRateLimited() {
+        return System.currentTimeMillis() - lastCallTime < RATE_LIMIT_MS;
+    }
+
+    /**
      * Query the LLM for optimal attack strategy based on sentinel positions
      */
     public AttackDecision getAttackStrategy(List<Position> sentinelPositions, Position waspPosition, int mapWidth,
@@ -125,6 +137,78 @@ public class GeminiService {
             }
             return getDefaultDecision(sentinelPositions, waspPosition);
         }
+    }
+
+    /**
+     * Start prefetching next strategy in background thread.
+     * Call this while Wasp is moving to eliminate wait time.
+     */
+    public void prefetchNextStrategy(List<Position> sentinelPositions, Position waspPosition,
+            int mapWidth, int mapHeight) {
+        // Don't start new prefetch if one is already in progress
+        if (prefetchInProgress) {
+            return;
+        }
+
+        // Check rate limit - if not enough time passed, don't prefetch
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastCallTime < RATE_LIMIT_MS - 1000) { // Start 1s before rate limit expires
+            return;
+        }
+
+        prefetchInProgress = true;
+        System.out.println("[GeminiService] Starting prefetch for next target...");
+
+        Thread prefetchThread = new Thread(() -> {
+            try {
+                AttackDecision decision = getAttackStrategy(sentinelPositions, waspPosition, mapWidth, mapHeight);
+                prefetchedDecision = decision;
+                lastValidDecision = decision;
+                System.out.println(
+                        "[GeminiService] Prefetch complete: (" + decision.targetX + ", " + decision.targetY + ")");
+            } catch (Exception e) {
+                System.err.println("[GeminiService] Prefetch error: " + e.getMessage());
+            } finally {
+                prefetchInProgress = false;
+            }
+        });
+        prefetchThread.setDaemon(true);
+        prefetchThread.start();
+    }
+
+    /**
+     * Check if a prefetched decision is available (without consuming it)
+     */
+    public boolean hasPrefetchedDecision() {
+        return prefetchedDecision != null;
+    }
+
+    /**
+     * Get prefetched decision if available.
+     * Returns null if no prefetch is ready.
+     * NOTE: This consumes the prefetched decision (sets it to null)
+     */
+    public AttackDecision getPrefetchedDecision() {
+        if (prefetchedDecision != null) {
+            AttackDecision result = prefetchedDecision;
+            prefetchedDecision = null;
+            return result;
+        }
+        return null;
+    }
+
+    /**
+     * Check if prefetch is currently in progress
+     */
+    public boolean isPrefetchInProgress() {
+        return prefetchInProgress;
+    }
+
+    /**
+     * Get last valid decision (fallback when prefetch not ready)
+     */
+    public AttackDecision getLastValidDecision() {
+        return lastValidDecision;
     }
 
     private String buildPrompt(List<Position> sentinelPositions, Position waspPosition, int mapWidth, int mapHeight) {

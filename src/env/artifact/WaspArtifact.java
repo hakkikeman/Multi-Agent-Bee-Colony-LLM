@@ -260,9 +260,12 @@ public class WaspArtifact extends Artifact {
 
         // PHASE 2: Main battle loop
         while (battleActive && wasp.isAlive()) {
-            // === CONTINUOUS BATTLE CHECK (while waiting for LLM) ===
-            // Attack/counter-attack checks happen every 50ms even during LLM decision phase
-            for (int waitStep = 0; waitStep < 40 && wasp.isAlive(); waitStep++) { // 40 * 50ms = 2s
+            // === MINIMAL BATTLE CHECK (50ms) ===
+            // Minimal wait - just one quick check before getting next target
+            // Movement loop handles all battle mechanics anyway
+            int maxWaitSteps = 1; // 1 * 50ms = 50ms (minimum for thread sync)
+
+            for (int waitStep = 0; waitStep < maxWaitSteps && wasp.isAlive(); waitStep++) {
                 await_time(50);
 
                 Position waspPos = wasp.getPosition();
@@ -316,18 +319,28 @@ public class WaspArtifact extends Artifact {
                 break;
             }
 
-            // Get LLM strategy
+            // === OPTIMIZED LLM STRATEGY: Use prefetch if available ===
+            GeminiService.AttackDecision decision = geminiService.getPrefetchedDecision();
 
-            GeminiService.AttackDecision decision = geminiService.getAttackStrategy(
-                    sentinels,
-                    wasp.getPosition(),
-                    Environment.getInstance().getWidth(),
-                    Environment.getInstance().getHeight());
+            if (decision == null) {
+                // No prefetch ready - get synchronously (first iteration or fallback)
+                decision = geminiService.getAttackStrategy(
+                        sentinels,
+                        wasp.getPosition(),
+                        Environment.getInstance().getWidth(),
+                        Environment.getInstance().getHeight());
+            } else {
+                System.out.println("[WaspArtifact] Using prefetched target - NO WAIT!");
+            }
 
             targetX = decision.targetX;
             targetY = decision.targetY;
             lastReasoning = decision.reasoning;
             updateAttackTarget();
+
+            // Calculate initial distance for prefetch trigger
+            double initialDistance = wasp.distanceTo(new Position(targetX, targetY));
+            boolean prefetchStarted = false;
 
             // Move toward target - FASTER battle loop
             int steps = 0;
@@ -389,6 +402,19 @@ public class WaspArtifact extends Artifact {
                         Environment.getInstance().declareSentinelVictory();
                         break;
                     }
+                }
+
+                // === PREFETCH TRIGGER: Start LLM query at 50% distance ===
+                double remainingDistance = wasp.distanceTo(new Position(targetX, targetY));
+                if (!prefetchStarted && remainingDistance < initialDistance * 0.5) {
+                    // Refresh sentinel positions for prefetch
+                    List<Position> currentSentinels = Environment.getInstance().getSentinelPositions();
+                    geminiService.prefetchNextStrategy(
+                            currentSentinels,
+                            wasp.getPosition(),
+                            Environment.getInstance().getWidth(),
+                            Environment.getInstance().getHeight());
+                    prefetchStarted = true;
                 }
             }
 
