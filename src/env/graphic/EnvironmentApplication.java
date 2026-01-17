@@ -141,7 +141,7 @@ public class EnvironmentApplication extends Application {
 		int currentY = startY;
 
 		// Bee type labels (including Wasp predator)
-		String[] beeLabels = { "Queen Bee", "Nurse Bee", "Sentinel Bee", "Worker Bee", "Larva", "Wasp (LLM)" };
+		String[] beeLabels = { "Queen Bee", "Nurse Bee", "Worker Bee", "Sentinel Bee", "Larva", "Wasp (LLM)" };
 		Color[] beeColors = { colorBeeQueen, colorBeeFeeder, colorBeeSentinel, colorBeeWorker,
 				Color.web("rgb(193,193,193)", 1), Color.web("rgb(180,0,0)", 1) }; // Wasp is dark red
 
