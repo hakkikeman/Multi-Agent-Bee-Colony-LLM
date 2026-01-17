@@ -389,7 +389,7 @@ too_old :-
     -wasp_nearby.
 
 // Group counter-attack coordination
-+sentinel_group_ready(Count) : Count >= 3 & role(sentinel) & not fleeing
++sentinel_group_ready(Count) : Count >= 2 & role(sentinel) & not fleeing
 <-  .print("COUNTER-ATTACK! ", Count, " sentinels ready!");
     .broadcast(tell, attacking_wasp).
 
